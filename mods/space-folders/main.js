@@ -115,9 +115,10 @@ const FALLBACK = 60000;
 // that draws space avatars): one strong color per hue, light and dark alike.
 const MARK = { ansi6: "#22a99a", ansi3: "#e3814f", ansi4: "#5b8def", ansi5: "#8b7cf6", ansi2: "#3fae6a", ansi1: "#d9649a" };
 
-// A space speaks up only when something in it needs you.
+// Compact rail: working spins, blocked/done a filled dot in the status color,
+// idle a ring, no agent a faint middle dot (as herdr-app PR #223 draws it).
 export function glyph(status) {
-  return status === "blocked" || status === "done" ? "●" : "·";
+  return status === "idle" ? "○" : status ? "●" : "·";
 }
 
 export function tone(t, status) {
@@ -603,6 +604,17 @@ export default class Spaces extends View {
       .when(g.behind > 0, (el) => el.child(div().flex_none().text_color(t.ansi1).child(`\u2193${g.behind}`)));
   }
 
+  // The space's rollup agent status, drawn as the agents list draws one
+  // agent's: working spins, blocked/done a filled dot in its color, idle a
+  // quiet ring, no agent an empty slot so the dots stay in one column.
+  // (Follows herdr-app PR #223 for Herdr's own spaces list.)
+  statusDot(status, t) {
+    if (status === "working") return svg("mods/workspace-chrome/spinner.svg").size(11).flex_none().text_color(t.working).spin(900);
+    if (!status) return div().size(7).flex_none();
+    if (status === "idle") return div().size(7).flex_none().rounded(4).border(1.5).border_color(t.idle ?? t.dim);
+    return div().size(7).flex_none().rounded(4).bg(tone(t, status));
+  }
+
   row({ w, i, g, tree, folder, nested }, t) {
     const on = w.active;
     const colors = shared("space.colors") ?? {};
@@ -656,7 +668,8 @@ export default class Spaces extends View {
           .when(Boolean(tree), el => el.pl(22).child(svg("mods/workspace-chrome/branch.svg").size(13).text_color(t.dim)))
           .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
           .child(div().flex_shrink(0).max_w(150).truncate().text_color(t.foreground).child(w.name))
-          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()),
+          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1())
+          .child(this.statusDot(w.status, t)),
       );
   }
 
@@ -671,7 +684,8 @@ export default class Spaces extends View {
       .hover((s) => s.bg(t.hover))
       .on_click(() => run("space.select", { id: w.id }))
       .child(div().text_color(w.active ? t.foreground : t.muted).child(String(i + 1)))
-      .child(div().text_color(tone(t, w.status)).child(glyph(w.status)));
+      .when(w.status === "working", (el) => el.child(svg("mods/workspace-chrome/spinner.svg").size(10).flex_none().text_color(t.working).spin(900)))
+      .when(w.status !== "working", (el) => el.child(div().text_color(tone(t, w.status)).child(glyph(w.status))));
   }
 
   render() {
