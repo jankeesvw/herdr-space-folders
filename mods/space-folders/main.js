@@ -48,14 +48,16 @@ async function expand(machine, path) {
 }
 
 // A new space for a folder, in its start folder; with no folder (id null), one
-// in none, whichever space is in front. Herdr names no id back, so the sidebar
-// gives the first space that appears (on that machine, for a folder) its place
-// (see adopt).
+// in none, whichever space is in front. machine null is this computer, sent as
+// "": with no machine, Herdr puts a clicked space.new on the machine in front,
+// which only the list's own + wants (it passes undefined). Herdr names no id
+// back, so the sidebar gives the first space that appears (on that machine, for
+// a folder) its place (see adopt).
 async function newSpaceIn(machine, id) {
   setShared("space-folders.new", { machine, id, before: spaces().map((s) => s.id), until: Date.now() + 60000 });
   const path = id && folders(machine).list.find((f) => f.id === id)?.path;
   const folder = path ? await expand(machine, path).catch(() => null) : null;
-  run("space.new", { ...(machine ? { machine } : {}), ...(folder ? { folder } : {}) });
+  run("space.new", { ...(machine === undefined ? {} : { machine: machine ?? "" }), ...(folder ? { folder } : {}) });
 }
 
 // A rule of "Collect spaces from" takes a folder and everything in it. "~" is
@@ -840,7 +842,7 @@ export default class Spaces extends View {
         .when(!collapsed, el => el.child("Spaces"))
         .child(h_flex().gap(2)
           .when(!collapsed, el => el.child(button("folder-new", "folder-plus", () => this.newFolder(null))))
-          .child(button("space-new", "plus", () => newSpaceIn(null, null)))))
+          .child(button("space-new", "plus", () => newSpaceIn(undefined, null)))))
       .child(v_flex().flex_1().min_h(0).px(8).pb(14).overflow_y_scrollbar().mode("always")
         // Released anywhere but on a space or a folder: out of its folder.
         .on_mouse_up("left", (_e, cx) => {
