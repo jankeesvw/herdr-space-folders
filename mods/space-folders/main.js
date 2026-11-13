@@ -146,6 +146,15 @@ export function tone(t, status) {
   return t[status] ?? t.unknown;
 }
 
+// Every agent's state at its space's row, as herdr's TUI shows it: a spinner
+// while working, a dot when it needs you, a ring when idle. No agent, no mark.
+function mark(t, status) {
+  if (!status) return div().flex_none();
+  if (status === "working") return svg("mods/workspace-chrome/spinner.svg").size(11).flex_none().text_color(t.working).spin(900);
+  const idle = status === "idle";
+  return div().flex_none().w(11).text_size(idle ? 9 : 11).text_color(idle ? t.dim : tone(t, status)).child(idle ? "○" : "●");
+}
+
 const NEW_FOLDER = "New folder";
 
 // A path's last folder name: "~/Projects/herdr/" gives "herdr"; "~" or "/" give "".
@@ -793,7 +802,8 @@ export default class Spaces extends View {
           .when(Boolean(tree), el => el.pl(22).child(svg("mods/workspace-chrome/branch.svg").size(13).text_color(t.dim)))
           .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
           .child(div().flex_shrink(0).max_w(150).truncate().text_color(t.foreground).child(w.name))
-          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()),
+          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1())
+          .child(mark(t, w.status)),
       );
   }
 
