@@ -10,7 +10,7 @@ Folders for the spaces list of the [Herdr](https://herdr.dev) desktop app. Drag 
 - **Drag and drop.** Drop a space on a folder to file it, on a space to put it there and in that space's folder, or below the list to take it out. Drag folders to put them in order.
 - **New spaces in a folder.** A folder's **+** (or **New space here**) opens a space in the folder's start folder, already in the folder. A space you make with Herdr's new-space keys (or the palette) goes right under the space you're in, in its folder, instead of at the bottom. The **+** at the top of the list and on a machine's header still make one in no folder.
 - **Smart folders.** A folder collects the spaces working in folders that match its rules: `wbso-ai` (a folder name anywhere), `~/code/client-*` (a path, `*` for one folder name). When several folders match, the most specific rule wins: with `~/projects` on one folder and `~/projects/client` on another, spaces in `~/projects/client` go to the second. What you drag yourself goes first.
-- **Folder icons.** Give a folder an image (**Edit folder…** → Icon) and its row and every space in it show that image instead of the colored letter, so a client's or a company's spaces carry its logo.
+- **Folder icons.** Give a folder an image (**Edit folder…** → Icon, plus an optional one for dark mode) and its row shows it instead of the colored tile, so a client's or a company's folder carries its logo. Tick **Show the icon on its spaces too** and its spaces show it instead of their letter.
 - **Machines in a folder.** A folder on this computer can take in another machine as well, with its header and its spaces: a rule that matches the machine's name (`vm-*`) or the folder one of its spaces works in puts it there, so throwaway VMs for a project land in that project's folder by themselves.
 - **Keys that follow the list.** Option up and down (and Herdr's other next/previous space keys) go to the space above or below in the list as it shows, folders and all, past folded folders. Close the space you're in and you land on the one above it in the list.
 - **The same everywhere.** Folders are saved in the home of the machine the spaces run on (`~/.config/herdr-space-folders.json`), so every screen that connects to that machine shows the same folders.
@@ -18,7 +18,7 @@ Folders for the spaces list of the [Herdr](https://herdr.dev) desktop app. Drag 
 
 ![Editing a folder](edit.png)
 
-Right-click a folder to color it, open a new space in it, edit it or delete it. **Edit folder…** sets its name, the folder new spaces start in (**Choose…** opens the system's folder picker) the rules it collects spaces with and an optional icon: a path to an image in Herdr's home (`mods/space-folders/icons/logo.svg`), a full path or one from `~`.
+Right-click a folder to color it, open a new space in it, edit it or delete it. **Edit folder…** sets its name, the folder new spaces start in (**Choose…** opens the system's folder picker) the rules it collects spaces with and an optional icon, for light and for dark mode: a path to an image in Herdr's home (`mods/space-folders/icons/logo.svg`), a full path or one from `~`.
 
 ## Install
 
@@ -49,7 +49,7 @@ and give `keys.json` the same keys in a section named after that layout, `layout
 
 ## How folders are kept
 
-Each machine's folders live in `~/.config/herdr-space-folders.json` in that machine's home: the folders in order (name, color, start folder, rules, icon, folded) and which space went in which folder, by the id that machine knows the space by. A change shows at once and is written to the machine right away; changes from another screen come in within 15 seconds.
+Each machine's folders live in `~/.config/herdr-space-folders.json` in that machine's home: the folders in order (name, color, start folder, rules, icons, folded) and which space went in which folder, by the id that machine knows the space by. A change shows at once and is written to the machine right away; changes from another screen come in within 15 seconds.
 
 ## License
 
