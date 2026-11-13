@@ -9,9 +9,10 @@
 // A folder can start its new spaces in a folder, and collect the spaces
 // working in folders matching its rules. A folder on this computer collects
 // another machine too, with its header and spaces, when a rule matches the
-// machine's name or the folder one of its spaces works in.
+// machine's name or the folder one of its spaces works in. A folder with an
+// icon shows it on its tile and on its spaces, where they'd have their letter.
 
-import { View, div, svg } from "gpui-kit";
+import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { spaces, machines, panes, run, openOverlay, closeOverlay, props, exec, hc, theme, shared, setShared, watchFolder, window, layout, pickFolder, home, nextCommand } from "herdr";
 
@@ -148,6 +149,11 @@ export function tone(t, status) {
 
 const NEW_FOLDER = "New folder";
 
+// A folder's icon, in place of a tile: an image in Herdr's home
+// ("mods/space-folders/icons/logo.svg"), a full path, or one from "~", in full color.
+const picture = (path, size = 18) => image(path.startsWith("~") ? home() + path.slice(1) : path).size(size).flex_none().rounded(5);
+const iconOf = (machine, id) => (id && folders(machine).list.find((f) => f.id === id)?.icon) || null;
+
 // A path's last folder name: "~/Projects/herdr/" gives "herdr"; "~" or "/" give "".
 const lastPart = (p) => {
   const part = p.trim().replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? "";
@@ -165,6 +171,8 @@ export default class Spaces extends View {
       this.name = InputState.new({ value: f.name ?? "" });
       this.path = InputState.new({ value: f.path ?? "", placeholder: "e.g. ~/Documents/github.com/owner/repo" });
       this.match = InputState.new({ value: f.match ?? "", placeholder: "e.g. wbso-ai, ~/code/client-*" });
+      this.icon = InputState.new({ value: f.icon ?? "", placeholder: "e.g. mods/space-folders/icons/logo.svg" });
+      this.icon.on("change", (_e, cx) => cx.notify());
       // The rules follow the start folder until they're given rules of their own.
       this.mirror = !f.match || f.match === f.path;
       this.path.on("change", (_e, cx) => { if (this.mirror) { this.match.set_value(this.path.value()); cx.notify(); } });
@@ -175,7 +183,7 @@ export default class Spaces extends View {
       this.nameMirror = named(this.name.value());
       this.path.on("change", (_e, cx) => { this.follow(); cx.notify(); });
       this.name.on("change", () => { this.nameMirror = named(this.name.value()); });
-      for (const input of [this.name, this.path, this.match]) input.on("submit", () => this.saveFolder());
+      for (const input of [this.name, this.path, this.match, this.icon]) input.on("submit", () => this.saveFolder());
       this.name.set_selected_range({ start: 0, end: this.name.value().length });
       this.name.focus();
       cx.timer.after(300, () => this.name.focus());
@@ -491,9 +499,10 @@ export default class Spaces extends View {
   saveFolder() {
     const { id, machine, fresh, overlay } = this.editing, f = folders(machine);
     const name = this.name.value().trim(), path = this.path.value().trim() || null, match = this.match.value().trim() || null;
+    const icon = this.icon.value().trim() || null;
     // A folder deleted while its dialog was open isn't made again; a new one is made now.
     const list = fresh && !f.list.some((x) => x.id === id) ? [...f.list, { id, name: NEW_FOLDER, folded: false }] : f.list;
-    saveFolders(machine, { ...f, list: list.map((x) => x.id === id ? { ...x, name: name || x.name, path, match } : x) });
+    saveFolders(machine, { ...f, list: list.map((x) => x.id === id ? { ...x, name: name || x.name, path, match, icon } : x) });
     closeOverlay(overlay);
   }
 
@@ -574,7 +583,7 @@ export default class Spaces extends View {
       .on_click(() => this.toggleFolder(machine, f.id))
       .on_mouse_down("right", () => openOverlay({ mod: "space-folders", kind: "popup", width: 210, height: 160, props: { folderMenu: f.id, machine } }));
     // Built like a space's avatar: a filled 18px tile in the folder's color, its mark in white.
-    const tile = h_flex().size(18).flex_none().rounded(5).items_center().justify_center().bg(f.color ? (MARK[f.color] ?? f.color) : t.dim)
+    const tile = f.icon ? picture(f.icon) : h_flex().size(18).flex_none().rounded(5).items_center().justify_center().bg(f.color ? (MARK[f.color] ?? f.color) : t.dim)
       .child(svg("mods/workspace-chrome/folder.svg").size(13).text_color("#ffffff"));
     if (collapsed) return head.justify_center().child(tile);
     return head
@@ -627,6 +636,9 @@ export default class Spaces extends View {
         machine ? null : button("folder-choose", "Choose…", false, (_e, cx) => this.choose(cx))))
       .child(field("Collect spaces from", this.match,
         "Spaces working in these folders join this one. Comma-separated: a folder name like wbso-ai, or a path like ~/code/client-*."))
+      .child(field("Icon", this.icon,
+        "Shown on this folder and its spaces instead of their letter: an image in ~/.config/herdr-app, or a full path. Empty: letters.",
+        this.icon.value().trim() ? picture(this.icon.value().trim(), 22) : null))
       .child(h_flex().pt(4).gap(8).justify_end()
         .child(button("folder-cancel", "Cancel", false, () => closeOverlay(overlay)))
         .child(button("folder-save", "Save", true, () => this.saveFolder())));
@@ -745,6 +757,7 @@ export default class Spaces extends View {
     const colors = shared("space.colors") ?? {};
     const color = colors[w.id] ?? "ansi6";
     const fill = color.startsWith("#") ? color : (MARK[color] ?? t[color]);
+    const icon = iconOf(w.machine ?? null, folder);
     return v_flex()
       .relative()
       .id(`space-${w.id}`)
@@ -791,7 +804,8 @@ export default class Spaces extends View {
           .gap(9)
           .items_center()
           .when(Boolean(tree), el => el.pl(22).child(svg("mods/workspace-chrome/branch.svg").size(13).text_color(t.dim)))
-          .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
+          .when(!tree && Boolean(icon), el => el.child(picture(icon ?? "")))
+          .when(!tree && !icon, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
           .child(div().flex_shrink(0).max_w(150).truncate().text_color(t.foreground).child(w.name))
           .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()),
       );
